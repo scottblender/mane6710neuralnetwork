@@ -4,9 +4,11 @@
 % computes gradients for both the hidden and output layers.
 %
 % Inputs:
-%   w1       - Weight matrix for the first layer (size: [hidden_units x input_features])
+%   w1       - Weight matrix for the first layer (size: 
+% [hidden_units x input_features])
 %   b1       - Bias vector for the first layer (size: [hidden_units x 1])
-%   w2       - Weight matrix for the second layer (size: [output_classes x hidden_units])
+%   w2       - Weight matrix for the second layer (size: 
+% [output_classes x hidden_units])
 %   b2       - Bias vector for the second layer (size: [output_classes x 1])
 %   x        - Input data matrix (size: [input_features x num_samples])
 %   y        - True labels (size: [output_classes x num_samples])
@@ -18,7 +20,8 @@
 %                 (to check numerical gradients for the first layer).
 %
 % Outputs:
-%   dw1_cd   - Central difference gradient of the loss with respect to the weights 
+%   dw1_cd   - Central difference gradient of the loss with respect 
+% to the weights 
 %              of the first layer (size: same as w1)
 %   db1_cd   - Central difference gradient of the loss with respect to the bias 
 %              of the first layer (size: same as b1)
@@ -95,7 +98,8 @@ sampled_indices_b1 = randperm(num_biases_b1, min(sample_size, ...
 dw1_cd = zeros(size(w1));
 db1_cd = zeros(size(b1));
 
-% Compute numerical gradients for sampled weights of w1 using central difference
+% Compute numerical gradients for sampled weights of 
+% w1 using central difference
 for idx = sampled_indices_w1
     w_plus = w1; % Copy original weights
     w_minus = w1; % Copy original weights
@@ -106,12 +110,16 @@ for idx = sampled_indices_w1
     
     % Compute activations for perturbed weights (w+ and w-)
     a1_plus = createActFunc(w_plus, x, b1, func1); % Activations for w_plus
-    a2_plus = createActFunc(w2, a1_plus, b2, func2); % Activations for output layer
-    [~, ~, cost_plus] = createPropagation(w2, b2, a1_plus, y, func2); % Cost for w_plus
+    a2_plus = createActFunc(w2, a1_plus, b2, ...
+        func2); % Activations for output layer
+    [~, ~, cost_plus] = createPropagation(w2, b2, a1_plus, ...
+        y, func2); % Cost for w_plus
     
     a1_minus = createActFunc(w_minus, x, b1, func1); % Activations for w_minus
-    a2_minus = createActFunc(w2, a1_minus, b2, func2); % Activations for output layer
-    [~, ~, cost_minus] = createPropagation(w2, b2, a1_minus, y, func2); % Cost for w_minus
+    a2_minus = createActFunc(w2, a1_minus, b2, ...
+        func2); % Activations for output layer
+    [~, ~, cost_minus] = createPropagation(w2, b2, a1_minus, ...
+        y, func2); % Cost for w_minus
     
     % Central difference gradient for this weight
     dw1_cd(idx) = (cost_plus - cost_minus) / (2 * h_cd); 
@@ -128,12 +136,16 @@ for idx = sampled_indices_b1
     
     % Compute activations for perturbed biases (b+ and b-)
     a1_plus = createActFunc(w1, x, b_plus, func1); % Activations for b_plus
-    a2_plus = createActFunc(w2, a1_plus, b2, func2); % Activations for output layer
-    [~, ~, cost_plus] = createPropagation(w2, b2, a1_plus, y, func2); % Cost for b_plus
+    a2_plus = createActFunc(w2, a1_plus, b2, func2); % Activations for 
+    % output layer
+    [~, ~, cost_plus] = createPropagation(w2, b2, a1_plus, y, func2); % Cost 
+    % for b_plus
     
     a1_minus = createActFunc(w1, x, b_minus, func1); % Activations for b_minus
-    a2_minus = createActFunc(w2, a1_minus, b2, func2); % Activations for output layer
-    [~, ~, cost_minus] = createPropagation(w2, b2, a1_minus, y, func2); % Cost for b_minus
+    a2_minus = createActFunc(w2, a1_minus, b2, func2); % Activations for 
+    % output layer
+    [~, ~, cost_minus] = createPropagation(w2, b2, a1_minus, y, func2); % Cost 
+    % for b_minus
     
     % Central difference gradient for this bias
     db1_cd(idx) = (cost_plus - cost_minus) / (2 * h_cd);
@@ -142,19 +154,23 @@ end
 % Display max and mean differences between the analytical and complex-step 
 % gradients
 disp('Output Layer Gradients:');
-disp(['Max Difference (Weights): ', num2str(max(abs(dw2(:) - dw2_cs(:))))]);
-disp(['Max Difference (Biases): ', num2str(max(abs(db2(:) - db2_cs(:))))]);
-disp(['Mean Difference (Weights): ', num2str(mean(abs(dw2(:) - dw2_cs(:))))]);
-disp(['Mean Difference (Biases): ', num2str(mean(abs(db2(:) - db2_cs(:))))]);
+disp(['Max Difference (Weights): ', ...
+    num2str(max(abs(dw2(:) - dw2_cs(:))))]);
+disp(['Max Difference (Biases): ', ...
+    num2str(max(abs(db2(:) - db2_cs(:))))]);
+disp(['Mean Difference (Weights): ', ...
+    num2str(mean(abs(dw2(:) - dw2_cs(:))))]);
+disp(['Mean Difference (Biases): ', ...
+    num2str(mean(abs(db2(:) - db2_cs(:))))]);
 
 % Display max and mean differences for hidden layer gradients (sampled)
 disp('Hidden Layer Gradients (Sampled):');
-disp(['Max Difference (Weights): ', num2str(max(abs(dw1(sampled_indices_w1) ...
-    - dw1_cd(sampled_indices_w1))))]);
-disp(['Max Difference (Biases): ', num2str(max(abs(db1(sampled_indices_b1) ...
-    - db1_cd(sampled_indices_b1))))]);
-disp(['Mean Difference (Weights): ', num2str(mean(abs(dw1(sampled_indices_w1) ...
-    - dw1_cd(sampled_indices_w1))))]);
-disp(['Mean Difference (Biases): ', num2str(mean(abs(db1(sampled_indices_b1) ...
-    - db1_cd(sampled_indices_b1))))]);
+disp(['Max Difference (Weights): ', ...
+    num2str(max(abs(dw1(sampled_indices_w1) - dw1_cd(sampled_indices_w1))))]);
+disp(['Max Difference (Biases): ', ...
+    num2str(max(abs(db1(sampled_indices_b1) - db1_cd(sampled_indices_b1))))]);
+disp(['Mean Difference (Weights): ', ...
+    num2str(mean(abs(dw1(sampled_indices_w1) - dw1_cd(sampled_indices_w1))))]);
+disp(['Mean Difference (Biases): ', ...
+    num2str(mean(abs(db1(sampled_indices_b1) - db1_cd(sampled_indices_b1))))]);
 end
