@@ -1,13 +1,15 @@
-% Performs forward propagation and computes the gradients (dw, db) 
-% as well as the cost for a given activation function.
+% Performs forward propagation, computes the gradients using both 
+% analytical and numerical differentiation techniques (central difference 
+% and complex-step), and compares them for correctness. The function 
+% computes gradients for both the hidden and output layers.
 %
 % Inputs:
-%   w        - Weight matrix (size: [number of units in previous layer 
-%              x number of units in current layer])
-%   b        - Bias vector (size: [number of units in current layer x 1])
-%   x        - Input data matrix (size: [number of features x number 
-%              of examples])
-%   y        - True labels (size: [number of classes x number of examples])
+%   w1       - Weight matrix for the first layer (size: [hidden_units x input_features])
+%   b1       - Bias vector for the first layer (size: [hidden_units x 1])
+%   w2       - Weight matrix for the second layer (size: [output_classes x hidden_units])
+%   b2       - Bias vector for the second layer (size: [output_classes x 1])
+%   x        - Input data matrix (size: [input_features x num_samples])
+%   y        - True labels (size: [output_classes x num_samples])
 %   func1    - String specifying the activation function for the first layer 
 %              ('sigmoid', 'tanh', 'ReLu', 'identity')
 %   func2    - String specifying the activation function for the second layer 
@@ -16,23 +18,27 @@
 %                 (to check numerical gradients for the first layer).
 %
 % Outputs:
-%   dw1_cs   - Complex-step gradient of the loss with respect to the weights 
+%   dw1_cd   - Central difference gradient of the loss with respect to the weights 
 %              of the first layer (size: same as w1)
-%   db1_cs   - Complex-step gradient of the loss with respect to the bias 
+%   db1_cd   - Central difference gradient of the loss with respect to the bias 
 %              of the first layer (size: same as b1)
 %   dw2_cs   - Complex-step gradient of the loss with respect to the weights 
 %              of the second layer (size: same as w2)
 %   db2_cs   - Complex-step gradient of the loss with respect to the bias 
 %              of the second layer (size: same as b2)
 %
-% This function computes the forward pass for a neural network, then checks 
+% This function performs the forward pass for a neural network, computes 
 % the gradients of the loss with respect to the weights and biases using 
-% both analytical gradients and complex-step numerical differentiation. 
-% It also compares the results to ensure correctness.
+% both analytical and numerical differentiation techniques:
+%   - **Central difference** method for the hidden layer (first layer).
+%   - **Complex-step** differentiation method for the output layer (second layer).
+% The gradients are compared with the analytical (backpropagation) gradients 
+% to check for correctness.
 function [dw1_cd, db1_cd, dw2_cs, db2_cs] = checkGradients(w1, b1, w2, b2, ...
     x, y, func1, func2, sample_size)
-h_cs = 1e-30; % Adjusted small imaginary step for complex-step differentiation
-h_cd = 1e-5;
+    
+h_cs = 1e-30; % Small imaginary step for complex-step differentiation
+h_cd = 1e-5;  % Small step for central difference differentiation
 
 % --- Forward Pass ---
 a1 = createActFunc(w1, x, b1, func1); % Activations for the hidden layer
@@ -60,7 +66,7 @@ dw1 = (1 / m) * (dA1 * x'); % Gradient of the loss with respect to the
 db1 = mean(dA1, 2); % Gradient of the loss with respect to the bias of 
 % the first layer
 
-% --- Numerical Gradients for Output Layer ---
+% --- Numerical Gradients for Output Layer using Complex-Step Differentiation ---
 dw2_cs = zeros(size(w2));
 db2_cs = zeros(size(b2));
 
@@ -68,17 +74,17 @@ for i = 1:numel(w2)
     w_cs = w2; % Copy weights
     w_cs(i) = w_cs(i) + complex(0.0, h_cs); % Add small imaginary step
     [~, ~, cost] = createPropagation(w_cs, b2, a1, y, func2); % Recompute cost
-    dw2_cs(i) = imag(cost) / h_cs; % Gradient from complex step
+    dw2_cs(i) = imag(cost) / h_cs; % Gradient from complex-step
 end
 
 for j = 1:numel(b2)
     b_cs = b2; % Copy biases
     b_cs(j) = b_cs(j) + complex(0.0, h_cs); % Add small imaginary step
     [~, ~, cost] = createPropagation(w2, b_cs, a1, y, func2); % Recompute cost
-    db2_cs(j) = imag(cost) / h_cs; % Gradient from complex step
+    db2_cs(j) = imag(cost) / h_cs; % Gradient from complex-step
 end
 
-% --- Numerical Gradients for Hidden Layer (with sampling) ---
+% --- Numerical Gradients for Hidden Layer using Central Difference ---
 num_weights_w1 = numel(w1);
 num_biases_b1 = numel(b1);
 sampled_indices_w1 = randperm(num_weights_w1, min(sample_size, ...
@@ -100,28 +106,15 @@ for idx = sampled_indices_w1
     
     % Compute activations for perturbed weights (w+ and w-)
     a1_plus = createActFunc(w_plus, x, b1, func1); % Activations for w_plus
-    a2_plus = createActFunc(w2, a1_plus, b2, func2); % Activations for output 
-    % layer
-    [~, ~, cost_plus] = createPropagation(w2, b2, a1_plus, y, func2); % Cost 
-    % for w_plus
+    a2_plus = createActFunc(w2, a1_plus, b2, func2); % Activations for output layer
+    [~, ~, cost_plus] = createPropagation(w2, b2, a1_plus, y, func2); % Cost for w_plus
     
     a1_minus = createActFunc(w_minus, x, b1, func1); % Activations for w_minus
-    a2_minus = createActFunc(w2, a1_minus, b2, func2); % Activations for 
-    % output layer
-    [~, ~, cost_minus] = createPropagation(w2, b2, a1_minus, ...
-        y, func2); % Cost for w_minus
+    a2_minus = createActFunc(w2, a1_minus, b2, func2); % Activations for output layer
+    [~, ~, cost_minus] = createPropagation(w2, b2, a1_minus, y, func2); % Cost for w_minus
     
     % Central difference gradient for this weight
     dw1_cd(idx) = (cost_plus - cost_minus) / (2 * h_cd); 
-
-    % Debugging prints
-    disp(['Perturbed Weight (w' num2str(idx) '): ', num2str(w1(idx))]);
-    disp(['Original Cost (w' num2str(idx) '): ', num2str(cost_plus), ...
-        ' | ', num2str(cost_minus)]);
-    disp(['Central Difference Gradient (dw1_cs' num2str(idx) '): ', ...
-        num2str(dw1_cd(idx))]);
-    disp(['Regular Gradient (dw1' num2str(idx) '): ', ...
-        num2str(dw1(idx))]); % Print regular gradient
 end
 
 % Compute numerical gradients for sampled biases of b1 using central difference
@@ -135,30 +128,16 @@ for idx = sampled_indices_b1
     
     % Compute activations for perturbed biases (b+ and b-)
     a1_plus = createActFunc(w1, x, b_plus, func1); % Activations for b_plus
-    a2_plus = createActFunc(w2, a1_plus, b2, func2); % Activations for output 
-    % layer
-    [~, ~, cost_plus] = createPropagation(w2, b2, a1_plus, y, func2); % Cost 
-    % for b_plus
+    a2_plus = createActFunc(w2, a1_plus, b2, func2); % Activations for output layer
+    [~, ~, cost_plus] = createPropagation(w2, b2, a1_plus, y, func2); % Cost for b_plus
     
     a1_minus = createActFunc(w1, x, b_minus, func1); % Activations for b_minus
-    a2_minus = createActFunc(w2, a1_minus, b2, func2); % Activations for 
-    % output layer
-    [~, ~, cost_minus] = createPropagation(w2, b2, a1_minus, y, func2); % Cost 
-    % for b_minus
+    a2_minus = createActFunc(w2, a1_minus, b2, func2); % Activations for output layer
+    [~, ~, cost_minus] = createPropagation(w2, b2, a1_minus, y, func2); % Cost for b_minus
     
     % Central difference gradient for this bias
     db1_cd(idx) = (cost_plus - cost_minus) / (2 * h_cd);
-
-    % Debugging prints
-    disp(['Perturbed Bias (b' num2str(idx) '): ', num2str(b1(idx))]);
-    disp(['Original Cost (b' num2str(idx) '): ', num2str(cost_plus), ...
-        ' | ', num2str(cost_minus)]);
-    disp(['Central Difference Gradient (db1_cs' num2str(idx) '):' ...
-        ' ', num2str(db1_cd(idx))]);
-    disp(['Regular Gradient (db1' num2str(idx) '): ', ...
-        num2str(db1(idx))]); % Print regular gradient
 end
-
 
 % Display max and mean differences between the analytical and complex-step 
 % gradients
